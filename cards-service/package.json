@@ -1,12 +1,13 @@
 {
-  "name": "api-gateway",
+  "name": "cards-service",
   "version": "1.0.0",
   "description": "",
-  "main": "handler.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "transpile": "./node_modules/.bin/babel ./src --out-dir ./lib",
-    "start": "node ./lib/app.js"
+    "start": "npm run transpile & node ./bin/www",
+    "devstart": "npm run transpile & nodemon ./bin/www"
   },
   "keywords": [],
   "author": "",
@@ -14,13 +15,11 @@
   "dependencies": {
     "@babel/polyfill": "^7.7.0",
     "body-parser": "^1.19.0",
-    "express": "^4.17.1",
-    "express-http-proxy": "^1.6.0"
+    "express": "^4.17.1"
   },
   "devDependencies": {
     "@babel/cli": "^7.7.7",
     "@babel/core": "^7.7.7",
-    "@babel/preset-env": "^7.7.7",
-    "nodemon": "^2.0.2"
+    "@babel/preset-env": "^7.7.7"
   }
 }
