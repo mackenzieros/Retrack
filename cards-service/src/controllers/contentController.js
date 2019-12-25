@@ -12,7 +12,7 @@ const removeLatex = (str) => {
         return str;
     }
 
-    // Remove all text prior that was to be formatted by latex
+    // Remove all text that was to be formatted by latex
     const index = matches.index
     var left = index;
     while (left >= 0) {
@@ -22,7 +22,7 @@ const removeLatex = (str) => {
         --left;
     }
     var cleanedStr = str.slice(0, left + 1) + str.slice(index, str.length); // removes text-to-be-formatted
-    cleanedStr = cleanedStr.replace(matches[0], matches[1]);    // removes inline latex
+    cleanedStr = cleanedStr.replace(matches[0], matches[1]);    // replaces inline latex with latex description
     return cleanedStr;
 };
 
@@ -34,13 +34,11 @@ module.exports.scrapeWebpage = async (url) => {
         const html = await axios.get(url);
         const $ = cheerio.load(html.data);
         // Go into body tag and retrieve content
-        $('body').each((i, elem) => {
-            const pTags = $(elem).find('p').slice(0, tagLimit);
-            var content = pTags.text().trim();
+        const pTags = $('body').find('p').slice(0, tagLimit);
+        var content = pTags.text().trim();
 
-            content = content.replace(/\r?\n|\r|[ ]{2,}|[\[0-9\]]/g, '');   // removes all extra whitespace characters and annotation subscripts
-            response.blurb = removeLatex(content);
-        });
+        content = content.replace(/\r?\n|\r|[ ]{2,}|[\[0-9\]]/g, '');   // removes all extra whitespace characters and annotation subscripts
+        response.blurb = removeLatex(content);
     } catch (err) {
         console.log('Error occurred while fetching webpages: ', err.message);
         response.error = err.message;

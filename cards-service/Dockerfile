@@ -8,10 +8,11 @@ COPY babel.config.js ./
 COPY ./src/ ./src/
 
 RUN npm install
+RUN npm install --save-dev nodemon
 RUN npm run transpile
 
 COPY . .
 
 EXPOSE 5000
 
-CMD ["npm", "run", "start"]
+CMD ["npm", "run", "devstart"]
