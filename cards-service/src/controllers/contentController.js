@@ -1,9 +1,8 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-const GOOGLE_API_KEY = 'AIzaSyBxoKQ2Zw2O8BcKAcnDXJPoTs4tMxKjkL8';
-const CSE_INDENTIFIER = '015113414327467658234:sahhtyomkt9';
-const GOOGLE_API_URL = `https://www.googleapis.com/customsearch/v1?key=${GOOGLE_API_KEY}&cx=${CSE_INDENTIFIER}`;
+require('dotenv').config();
+const GOOGLE_API_URL = `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_API_KEY}&cx=${process.env.CSE_INDENTIFIER}`;
 
 const removeLatex = (str) => {
     const regex = /\{[^\}]* (.*)(?=\})\}/g; // regex for catching all inline latex
@@ -67,7 +66,7 @@ module.exports.autoPop = async (req, res, next) => {
         // for (var i = 0; i < retrievalLimit; ++i ) {
         //     webPagesToParse.push(searchRes.data.items[i].link);
         // };
-        
+
         // FOR TESTING, GOOGLE CSE API HAS DAILY LIMIT OF 100 QUERIES
         var webPagesToParse = [
             'https://en.wikipedia.org/wiki/A*_search_algorithm',
@@ -82,6 +81,8 @@ module.exports.autoPop = async (req, res, next) => {
         };
 
         response.res = await Promise.all(promises);
+        response.suggestedSpelling = searchRes.data.spelling ? 
+            searchRes.data.spelling.correctedQuery.replace(' -inurl:pdf', '') : null;
     } catch (err) {
         console.log('Error occurred while communicating with Google CSE: ', err.message);
         response.error = err.message;
