@@ -1,9 +1,11 @@
 import spacy
-from spacy import displacy
 from collections import defaultdict
 
 nlp = spacy.load('en_core_web_lg')
 
+# TODO:
+# Generate new type of question where object is found before subject
+#   - can include wh-determiner to create new questions
 class QuestionGenerator:
     class Question:
         def __init__(self, wh, aux, nsubj, verb, obj):
@@ -50,7 +52,7 @@ class QuestionGenerator:
         Args:
             doc: spacy.Doc
         '''
-        self._doc = doc
+        self._doc = nlp(doc)
         self._questions = []
         self._generate_questions()
     
@@ -82,9 +84,7 @@ class QuestionGenerator:
         Returns:
             A spacy.Token of the subject found in the clause or None
         '''
-        subj = None
         in_punct = False # ignore all tokens in parentheses, brackets, and curly braces
-        
         for token in clause:
             if token.text in {'(', '[', '{'}:
                 in_punct = True
@@ -93,12 +93,11 @@ class QuestionGenerator:
             if in_punct:
                 continue
 
-            # checks for first subject, validity of dependency of subject, and whether it's a wh-determiner
-            if not subj and nlp.vocab[token.dep].text in {'csubj', 'csubjpass', 'nsubj', 'nsubjpass'} and 'wh-determiner' not in spacy.explain(token.tag_):
-                subj = token
-                break
+            # checks for validity of dependency of subject, and whether it's a wh-determiner
+            if nlp.vocab[token.dep].text in {'csubj', 'csubjpass', 'nsubj', 'nsubjpass'} and 'wh-determiner' not in spacy.explain(token.tag_):
+                return token
         
-        return subj
+        return None
 
 
     def _determine_wh(self, clause, obj) -> str:
@@ -153,12 +152,16 @@ class QuestionGenerator:
         # a future-tense verb is preceded by the auxillary verb
         if verb_tense == 'FUTURE':
             return verb.nbor(-1).text
-            
+        
         # look for the auxillary verb
         for token in clause:
             if token.pos_ == 'AUX' or nlp.vocab[token.dep].text == 'aux':
+                if verb == token: # aux is root verb
+                    return verb.text
                 if token.text == 'to':
                     return 'will'
+                if token.text == 'is':
+                    return 'do'
                 return token.text
     
         # if no auxillary verb could be found in the sentence, use default aux verb (do)
@@ -219,7 +222,7 @@ class QuestionGenerator:
                 return search_res
         
 
-    def _map_syntax(self, doc, start, end) -> dict or None:
+    def _map_syntax(self, start, end) -> dict or None:
         '''
         Function to map the syntax of a clause to its subject, object, and verb.
         Also determines where to split on original spacy.Doc for more efficient parsing.
@@ -236,7 +239,7 @@ class QuestionGenerator:
         subj = None
         obj = None
 
-        clause = doc[start:end] # span of clause to analyze
+        clause = self._doc[start:end] # span of clause to analyze
         verb = clause.root
         c_map = dict() # map of sentence syntax
         c_map['end'] = verb.right_edge.i # used to cut iteration
@@ -244,7 +247,7 @@ class QuestionGenerator:
         for chunk in clause.noun_chunks:
             if not subj and chunk.root.dep_ in {'csubj', 'csubjpass', 'nsubj', 'nsubjpass'}:
                 subj_subtree = [child for child in chunk.subtree]
-                subj = doc[subj_subtree[0].i: subj_subtree[-1].i + 1] # subject is nsubj and all of its children
+                subj = self._doc[subj_subtree[0].i: subj_subtree[-1].i + 1] # subject is nsubj and all of its children
                 
                 verb = chunk.root.head # re-assign verb because actual root verb may not be included
                 c_map['end'] = verb.right_edge.i
@@ -266,7 +269,7 @@ class QuestionGenerator:
                 return None
             else:
                 subj_subtree = [child for child in subj_token.subtree]
-                subj = doc[subj_subtree[0].i: subj_subtree[-1].i + 1] # subject is nsubj and all of its children
+                subj = self._doc[subj_subtree[0].i: subj_subtree[-1].i + 1] # subject is nsubj and all of its children
     
             # find the object of the sentence
             if obj == None:
@@ -282,7 +285,7 @@ class QuestionGenerator:
         
         # update sentence split parameter if we find a passive nominal subject in the clause;
         # we may be able to make another question using this new clause
-        for token in doc[start:verb.right_edge.i]:
+        for token in self._doc[start:verb.right_edge.i]:
             if nlp.vocab[token.dep].text == 'nsubjpass' and token not in subj:
                 c_map['end'] = token.i
         
@@ -290,7 +293,7 @@ class QuestionGenerator:
             verb = verb.lemma_
         else:
             verb = verb.text
-    
+
         c_map['wh'] = wh
         c_map['nsubj'] = subj
         c_map['obj'] = obj
@@ -310,7 +313,7 @@ class QuestionGenerator:
         
         in_punct = False # flag to ignore all words contained in parantheses, brackets, and curly braces
         while end < len(self._doc) and start < end:
-            token = doc[end]
+            token = self._doc[end]
             
             if token.text in {'(', '[', '{'}:
                 in_punct = True
@@ -326,7 +329,8 @@ class QuestionGenerator:
                 continue
 
             # parse the clause for syntax (nominal subject, verb, etc.)
-            c_map = self._map_syntax(self._doc, start, end)
+            c_map = self._map_syntax(start, end)
+
             if c_map == None:
                 end += 1
                 continue
@@ -348,8 +352,8 @@ class QuestionGenerator:
             end += 1
 
         # attempt to make a question from remainder of sentence
-        if start < len(doc):
-            c_map = self._map_syntax(self._doc, start, len(doc))
+        if start < len(self._doc):
+            c_map = self._map_syntax(start, len(self._doc))
             if c_map == None:
                 return
 
@@ -359,23 +363,22 @@ class QuestionGenerator:
             self._questions.append(QuestionGenerator.Question(
                 c_map['wh'], 
                 c_map['aux'], 
-                c_map['nsubj'] if self._is_proper_noun(c_map['nsubj']) else c_map['nsubj'].lower(), 
+                c_map['nsubj'].text if self._is_proper_noun(c_map['nsubj']) else c_map['nsubj'].text.lower(), 
                 c_map['verb'].lower(),
                 c_map['obj'],
             ))
 
 
-    def get_questions(self) -> None:
+    def get_questions(self) -> list:
         '''
-        Prints all of the questions contained in the Question Generator
+        Returns all of the questions contained in the Question Generator
         '''
-        for q in self._questions:
-            print(q)
+        return self._questions
 
             
 
-if __name__ == '__main__':
-    doc = nlp(u'A* (pronounced "A-star") is a graph traversal and path search algorithm, and it is often used in computer science due to its completeness,'
-    u' optimality, and optimal efficiency. One major practical drawback is its O(b^d) space complexity, as it stores all generated nodes in memory.')
-    qg = QuestionGenerator(doc)
-    qg.get_questions()
+# if __name__ == '__main__':
+#     doc = nlp(u'A* (pronounced "A-star") is a graph traversal and path search algorithm, and it is often used in computer science due to its completeness,'
+#     u' optimality, and optimal efficiency. One major practical drawback is its O(b^d) space complexity, as it stores all generated nodes in memory.')
+#     qg = QuestionGenerator(doc)
+#     qg.get_questions()
