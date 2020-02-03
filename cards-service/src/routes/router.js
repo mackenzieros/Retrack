@@ -3,6 +3,6 @@ const router = express.Router();
 
 const contentController = require('../controllers/contentController');
 
-router.get('/autopopcontent', contentController.autoPop);
+router.post('/autopopcontent', contentController.autoPop);
 
 module.exports = router;

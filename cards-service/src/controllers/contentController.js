@@ -75,18 +75,18 @@ module.exports.autoPop = async (req, res, next) => {
     var response = {};
     try {
         // Make the google search and retrieve all webpages for scraping
-        // const searchUrl = `${GOOGLE_API_URL}${queryStr}`
-        // const searchRes = await axios.get(searchUrl);
-        // var webPagesToParse = [];
-        // for (var i = 0; i < retrievalLimit; ++i ) {
-        //     webPagesToParse.push(searchRes.data.items[i].link);
-        // };
+        const searchUrl = `${GOOGLE_API_URL}${queryStr}`
+        const searchRes = await axios.get(searchUrl);
+        var webPagesToParse = [];
+        for (var i = 0; i < retrievalLimit; ++i ) {
+            webPagesToParse.push(searchRes.data.items[i].link);
+        };
 
-        // FOR TESTING, GOOGLE CSE API HAS DAILY LIMIT OF 100 QUERIES
-        var webPagesToParse = [
-            'https://en.wikipedia.org/wiki/A*_search_algorithm',
-            'https://www.geeksforgeeks.org/a-search-algorithm/',
-        ];
+        // // FOR TESTING, GOOGLE CSE API HAS DAILY LIMIT OF 100 QUERIES
+        // var webPagesToParse = [
+        //     'https://en.wikipedia.org/wiki/A*_search_algorithm',
+        //     'https://www.geeksforgeeks.org/a-search-algorithm/',
+        // ];
 
         // Scrape all webpages for blurbs for notecards
         const promises = [];
