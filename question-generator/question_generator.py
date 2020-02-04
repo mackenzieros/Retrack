@@ -135,6 +135,23 @@ class QuestionGenerator:
         else:
             return 'What'
     
+    def _fg_aux(self, aux):
+        '''
+        Fine-grain tunes an auxillary verb according to exceptions found in English.
+        
+        Args:
+            aux: spacy.Token
+            
+        Returns:
+            Changed form of the auxillary verb as a string
+        '''
+        if aux.text == 'to':
+            return 'will'
+        elif aux.text == 'be':
+            return 'is'
+        else:
+            print('err: could not fine grain tune', aux)
+            return aux.text
 
     def _determine_aux(self, clause, verb, verb_tense) -> str:
         '''
@@ -149,20 +166,16 @@ class QuestionGenerator:
         Returns:
             The auxillary verb for the question.
         '''
-        # a future-tense verb is preceded by the auxillary verb
-        if verb_tense == 'FUTURE':
-            return verb.nbor(-1).text
+        # verb is preceded by the auxillary verb
+        if verb.nbor(-1).pos_ == 'AUX':
+            return self._fg_aux(verb.nbor(-1))
         
         # look for the auxillary verb
         for token in clause:
             if token.pos_ == 'AUX' or nlp.vocab[token.dep].text == 'aux':
                 if verb == token: # aux is root verb
-                    return verb.text
-                if token.text == 'to':
-                    return 'will'
-                if token.text == 'is':
-                    return 'do'
-                return token.text
+                    return self._fg_aux(verb)
+                return self._fg_aux(token)
     
         # if no auxillary verb could be found in the sentence, use default aux verb (do)
         if verb_tense == 'PAST_TENSE':
@@ -245,7 +258,7 @@ class QuestionGenerator:
         c_map['end'] = verb.right_edge.i # used to cut iteration
 
         for chunk in clause.noun_chunks:
-            if not subj and chunk.root.dep_ in {'csubj', 'csubjpass', 'nsubj', 'nsubjpass'}:
+            if chunk.root.dep_ in {'csubj', 'csubjpass', 'nsubj', 'nsubjpass'}:
                 subj_subtree = [child for child in chunk.subtree]
                 subj = self._doc[subj_subtree[0].i: subj_subtree[-1].i + 1] # subject is nsubj and all of its children
                 
@@ -285,9 +298,9 @@ class QuestionGenerator:
         
         # update sentence split parameter if we find a passive nominal subject in the clause;
         # we may be able to make another question using this new clause
-        for token in self._doc[start:verb.right_edge.i]:
-            if nlp.vocab[token.dep].text == 'nsubjpass' and token not in subj:
-                c_map['end'] = token.i
+#         for token in self._doc[start:verb.right_edge.i]:
+#             if nlp.vocab[token.dep].text == 'nsubjpass' and token not in subj:
+#                 c_map['end'] = token.i
         
         if verb_tense in {'PAST_TENSE', 'PRESENT'} and verb.text != aux:
             verb = verb.lemma_
