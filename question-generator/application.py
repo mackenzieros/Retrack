@@ -1,6 +1,7 @@
 import spacy
-from collections import defaultdict
+from flask import Flask, request, abort, jsonify
 
+app = Flask(__name__)
 nlp = spacy.load('en_core_web_md')
 
 # TODO:
@@ -376,10 +377,17 @@ class QuestionGenerator:
         '''
         return self._questions
 
-            
+@app.route('/genquest', methods=['POST'])
+def genquest():
+    if not request.json:
+        abort(400)
+    
+    if 'blurb' not in request.json.keys():
+        abort(422)
+    
+    blurb = request.json['blurb']
+    qg = QuestionGenerator(blurb)
+    return jsonify({'questions': [str(question) for question in qg.get_questions()]}), 201
 
-# if __name__ == '__main__':
-#     doc = nlp(u'A* (pronounced "A-star") is a graph traversal and path search algorithm, and it is often used in computer science due to its completeness,'
-#     u' optimality, and optimal efficiency. One major practical drawback is its O(b^d) space complexity, as it stores all generated nodes in memory.')
-#     qg = QuestionGenerator(doc)
-#     qg.get_questions()
+if __name__ == '__main__':
+    app.run()
