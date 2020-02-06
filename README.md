@@ -1,11 +1,14 @@
 # Retrack
-A mobile app to help with studying
+The backend for a mobile app to help with studying
 
 Users will be able to create notecards with its content automatically populated by typing in a topic or speaking the topic name to the app. The app will then generate questions given the information and send them to the user via push notifications.
 
 # Details
-The app consists of three parts:
+The api consists of two parts:
 
 ## Information Retrieval
+The Information Retrieval API uses axios, Google's Custom Search Engine, and cheerio to fetch the top webpages on a given topic, scrape the pages, and return their content.
 ## Question Generation
-## UI
+The Question Generation API uses spaCy's API to map the syntax tree, tag the part-of-speech, and perform named entity recognition. With these, the API parses a given blurb of information for its nominal subject, root verb, auxillary verb (if necessary), and object, and then creates WH-type questions.
+
+2/6/2020: Question generator works best with SVO sentence structures. Updates for object-focused sentences OTW.
