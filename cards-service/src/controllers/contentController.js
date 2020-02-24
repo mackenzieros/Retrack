@@ -1,8 +1,8 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
 
-require('dotenv').config();
-const GOOGLE_API_URL = `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_API_KEY}&cx=${process.env.CSE_IDENTIFIER}`;
+const WIKIPEDIA_API_URL = 'https://en.wikipedia.org/w/api.php';
+
 const removeLatex = (str) => {
     const regex = /\{[^\}]* (.*)(?=\})\}/g; // regex for catching all inline latex
     const matches = regex.exec(str);
@@ -43,8 +43,7 @@ module.exports.scrapeWebpage = async (url) => {
             content = pTags.slice(0, tagLimit).text().trim();
             currContentCount = content.length;
             ++tagLimit;
-        }
-        while (currContentCount < contentQuota && tagLimit < 10);
+        } while (currContentCount < contentQuota && tagLimit < 10);
 
         // No content
         if (content.length < 1) {
@@ -54,7 +53,7 @@ module.exports.scrapeWebpage = async (url) => {
         content = content.replace(/\r?\n|\r|[ ]{2,}|[\[0-9\]]/g, '');   // removes all extra whitespace characters and annotation subscripts
         response.blurb = removeLatex(content);
     } catch (err) {
-        console.log('Error occurred while fetching webpages: ', err.message);
+        console.log('Error occurred while fetching and scraping webpages: ', err.message);
         response.error = err.message;
     }
     return response;
@@ -62,44 +61,33 @@ module.exports.scrapeWebpage = async (url) => {
 
 module.exports.autoPop = async (req, res, next) => {
     const { query } = req.body;
-    const retrievalLimit = 2;
+    const params = {
+        action: 'opensearch',
+        search: query,
+        limit: 1,
+        namespace: 0,
+        format: 'json',
+    };
 
-    // Populate query params for google search
-    var queryStr = '&q='
-    for (const token of query) {
-        queryStr = queryStr.length == 3 ? queryStr.concat(token) : queryStr.concat(`+${token}`)
-    }
-    // TODO: scrape PDFs
-    queryStr = queryStr.concat('+-inurl%3Apdf');
+    var searchUrl = `${WIKIPEDIA_API_URL}?origin=*`;
+    Object.keys(params).forEach((key) => {
+        searchUrl = searchUrl.concat(`&${key}=${params[key]}`);
+    });
 
     var response = {};
     try {
-        // Make the google search and retrieve all webpages for scraping
-        const searchUrl = `${GOOGLE_API_URL}${queryStr}`
-        const searchRes = await axios.get(searchUrl);
-        var webPagesToParse = [];
-        for (var i = 0; i < retrievalLimit; ++i ) {
-            webPagesToParse.push(searchRes.data.items[i].link);
-        };
+        const searchRes = await axios.get(encodeURI(searchUrl));
+        const { data } = searchRes;
 
-        // // FOR TESTING, GOOGLE CSE API HAS DAILY LIMIT OF 100 QUERIES
-        // var webPagesToParse = [
-        //     'https://en.wikipedia.org/wiki/A*_search_algorithm',
-        //     'https://www.geeksforgeeks.org/a-search-algorithm/',
-        // ];
-
-        // Scrape all webpages for blurbs for notecards
-        const promises = [];
-        for (var i = 0; i < webPagesToParse.length; ++i) {
-            promises.push(module.exports.scrapeWebpage(webPagesToParse[i]));
-        };
-
-        response.res = await Promise.all(promises);
-        response.res = response.res.filter(obj => obj);
-        // response.suggestedSpelling = searchRes.data.spelling ? 
-        //     searchRes.data.spelling.correctedQuery.replace(' -inurl:pdf', '') : null;
+        const snippet = data[2][0];
+        if (snippet.length > 0) {
+            response.blurb = snippet;
+        } else {
+            const url = data[3][0]
+            response = await module.exports.scrapeWebpage(url);
+        }
     } catch (err) {
-        console.log('Error occurred while communicating with Google CSE: ', err.message);
+        console.log('Error occurred while in communicating with web search api: ', err.message);
         response = { 'err': err.message };
     }
     res.json(response);
