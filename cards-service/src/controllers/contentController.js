@@ -25,7 +25,7 @@ const removeLatex = (str) => {
 };
 
 module.exports.scrapeWebpage = async (url) => {
-    const response = {};
+    var blurb = null;
     try {
         // Fetch webpage and load the html for parsing
         const html = await axios.get(url);
@@ -47,16 +47,15 @@ module.exports.scrapeWebpage = async (url) => {
 
         // No content
         if (content.length < 1) {
-            return null;
+            return blurb;
         }
 
         content = content.replace(/\r?\n|\r|[ ]{2,}|[\[0-9\]]/g, '');   // removes all extra whitespace characters and annotation subscripts
-        response.blurb = removeLatex(content);
+        blurb = removeLatex(content);
     } catch (err) {
         console.log('Error occurred while fetching and scraping webpages: ', err.message);
-        response.error = err.message;
     }
-    return response;
+    return blurb;
 };
 
 module.exports.autoPop = async (req, res, next) => {
@@ -79,12 +78,18 @@ module.exports.autoPop = async (req, res, next) => {
         const searchRes = await axios.get(encodeURI(searchUrl));
         const { data } = searchRes;
 
-        const snippet = data[2][0];
-        if (snippet.length > 0) {
-            response.blurb = snippet;
+        const snippets = data[2];
+        const urls = data[3];
+        if (urls.length < 1) {
+            console.log('No urls found for: ', query);
+            response.blurb = null;
         } else {
-            const url = data[3][0]
-            response = await module.exports.scrapeWebpage(url);
+            if (snippets[0].length > 0) {
+                response.blurb = snippets[0];
+            } else {
+                const url = urls[0]
+                response.blurb = await module.exports.scrapeWebpage(url);
+            }
         }
     } catch (err) {
         console.log('Error occurred while in communicating with web search api: ', err.message);
