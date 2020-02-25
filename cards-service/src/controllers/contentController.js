@@ -30,7 +30,7 @@ module.exports.scrapeWebpage = async (url) => {
         // Fetch webpage and load the html for parsing
         const html = await axios.get(url);
         const $ = cheerio.load(html.data);
-        
+
         // Go into body tag and retrieve content
         const pTags = $('body').find('p');
 
@@ -78,6 +78,10 @@ module.exports.autoPop = async (req, res, next) => {
         const searchRes = await axios.get(encodeURI(searchUrl));
         const { data } = searchRes;
 
+        if (data.error) {
+            throw data.error;
+        }
+
         const snippets = data[2];
         const urls = data[3];
         if (urls.length < 1) {
@@ -92,8 +96,14 @@ module.exports.autoPop = async (req, res, next) => {
             }
         }
     } catch (err) {
-        console.log('Error occurred while in communicating with web search api: ', err.message);
-        response = { 'err': err.message };
+        console.log('Error occurred while in communicating with web search api: ', err);
+        response = {
+            'err':
+            {
+                'message': err.message,
+                'verbose': err
+            }
+        };
     }
     res.json(response);
 };
