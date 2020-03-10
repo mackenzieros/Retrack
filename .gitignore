@@ -3,3 +3,9 @@ package-lock.json
 lib/
 .env
 *.zip
+
+#SERVERLESS STUFF
+admin.env
+.env
+_meta
+.serverless
