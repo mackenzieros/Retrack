@@ -30,7 +30,7 @@ module.exports.scrapeWebpage = async (url) => {
         // Fetch webpage and load the html for parsing
         const html = await axios.get(url);
         const $ = cheerio.load(html.data);
-        
+
         // Go into body tag and retrieve content
         const pTags = $('body').find('p');
 
@@ -58,8 +58,8 @@ module.exports.scrapeWebpage = async (url) => {
     return blurb;
 };
 
-module.exports.autoPop = async (req, res, next) => {
-    const { query } = req.body;
+module.exports.autoPop = async (event, context, callback) => {
+    const { query } = JSON.parse(event.body);
     const params = {
         action: 'opensearch',
         search: query,
@@ -73,27 +73,43 @@ module.exports.autoPop = async (req, res, next) => {
         searchUrl = searchUrl.concat(`&${key}=${params[key]}`);
     });
 
-    var response = {};
+    var response = {
+        statusCode: 200,
+    };
+    var body = {};
     try {
         const searchRes = await axios.get(encodeURI(searchUrl));
         const { data } = searchRes;
+
+        if (data.error) {
+            throw data.error;
+        }
 
         const snippets = data[2];
         const urls = data[3];
         if (urls.length < 1) {
             console.log('No urls found for: ', query);
-            response.blurb = null;
+            body.blurb = null;
         } else {
             if (snippets[0].length > 0) {
-                response.blurb = snippets[0];
+                body.blurb = snippets[0];
             } else {
                 const url = urls[0]
-                response.blurb = await module.exports.scrapeWebpage(url);
+                body.blurb = await module.exports.scrapeWebpage(url);
             }
         }
     } catch (err) {
-        console.log('Error occurred while in communicating with web search api: ', err.message);
-        response = { 'err': err.message };
+        console.log('Error occurred while communicating with web search api: ', err);
+        body = {
+            'err':
+            {
+                'message': err.message,
+                'verbose': err
+            }
+        };
+        response.statusCode = 500;
     }
-    res.json(response);
+
+    response.body = JSON.stringify(body);
+    return response;
 };

@@ -1,0 +1,17 @@
+org: mackenzieros96
+app: cards-service-app
+service: cards-service
+provider:
+  name: aws
+  runtime: nodejs12.x
+  stage: dev
+  region: us-west-1
+
+functions:
+  autoPop:
+    handler: lib/controllers/contentController.autoPop
+    events:
+      - http:
+          path: autopopcontent
+          method: post
+          cors: true
