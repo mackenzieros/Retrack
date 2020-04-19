@@ -9,7 +9,7 @@ provider:
 
 functions:
   autoPop:
-    handler: lib/controllers/contentController.autoPop
+    handler: lib/controllers/scraper.autoPop
     events:
       - http:
           path: autopopcontent

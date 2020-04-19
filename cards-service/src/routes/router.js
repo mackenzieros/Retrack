@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 
-const contentController = require('../controllers/contentController');
+const scraper = require('../controllers/scraper');
 
-router.post('/autopopcontent', contentController.autoPop);
+router.post('/autopopcontent', scraper.autoPop);
 
 module.exports = router;
