@@ -4,10 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "mocha --recursive",
     "transpile": "./node_modules/.bin/babel ./src --out-dir ./lib",
     "start": "npm run transpile & node ./bin/www",
-    "devstart": "npm run transpile & node ./bin/www",
+    "devstart": "npm run transpile & node --inspect ./bin/www",
     "deploy": "npm run transpile & serverless deploy"
   },
   "keywords": [],
@@ -25,6 +25,8 @@
   "devDependencies": {
     "@babel/cli": "^7.7.7",
     "@babel/core": "^7.7.7",
-    "@babel/preset-env": "^7.7.7"
+    "@babel/preset-env": "^7.7.7",
+    "chai": "^4.2.0",
+    "mocha": "^7.1.1"
   }
 }

@@ -34,19 +34,17 @@ module.exports.scrapeWebpage = async (url) => {
         // Go into body tag and retrieve content
         const pTags = $('body').find('p');
 
-        var tagLimit = 2; // limits how many p tags we see (how much content is returned)
+        var tagLimit = 1; // limits how many p tags we see (how much content is returned)
         const contentQuota = 5; // should have atleast 5 characters to be considered
         var content = '';
-        var currContentCount = 0;
         // iteratively increase number of p tags
         do {
             content = pTags.slice(0, tagLimit).text().trim();
-            currContentCount = content.length;
             ++tagLimit;
-        } while (currContentCount < contentQuota && tagLimit < 10);
+        } while (content.length < contentQuota && tagLimit < 5);
 
         // No content
-        if (content.length < 1) {
+        if (content.length < 1 || /((.* or \(.*\))|(.*)) may refer to:/.exec(content)) {
             return blurb;
         }
 
@@ -80,7 +78,6 @@ module.exports.autoPop = async (event, context, callback) => {
     try {
         const searchRes = await axios.get(encodeURI(searchUrl));
         const { data } = searchRes;
-
         if (data.error) {
             throw data.error;
         }
