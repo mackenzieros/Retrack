@@ -44,7 +44,7 @@ module.exports.scrapeWebpage = async (url) => {
         } while (content.length < contentQuota && tagLimit < 5);
 
         // No content
-        if (content.length < 1 || /(.* or \(.*\))|(.*) may refer to:/.exec(content)) {
+        if (content.length < 1 || /((.* or \(.*\))|(.*)) may refer to:/.exec(content)) {
             return blurb;
         }
 
