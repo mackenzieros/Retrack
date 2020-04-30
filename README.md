@@ -16,4 +16,4 @@ The Question Generation API uses spaCy's API to map the syntax tree, tag the par
 
 Hosted with Heroku
 
-2/6/2020: Question generator works best with SVO sentence structures. Updates for object-focused sentences OTW.
+4/30/2020: Question generator works best with simple Subject-Verb-Object sentence structures.
